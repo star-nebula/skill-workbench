@@ -1,0 +1,9 @@
+node_modules/
+data/registry.json
+data/groups.json
+data/trash/
+data/log.md
+data/restore-*
+data/cat-overrides.json
+config/roots.local.cjs
+tools/_personal-migration/

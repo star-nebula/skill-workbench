@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skill 工作台</title>
+<style>
+:root { --bg:#f6f7f9; --card:#fff; --border:#e3e6ea; --text:#1c2430; --muted:#6b7686; --accent:#2563eb; --ok:#16a34a; --warn:#d97706; --bad:#dc2626; }
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:"Segoe UI","Microsoft YaHei",sans-serif; background:var(--bg); color:var(--text); font-size:14px; }
+header { background:var(--card); border-bottom:1px solid var(--border); padding:12px 20px; display:flex; align-items:center; gap:16px; position:sticky; top:0; z-index:5; }
+header h1 { font-size:17px; font-weight:600; }
+header .stats { color:var(--muted); font-size:12.5px; }
+header .hdrbtns { margin-left:auto; display:flex; gap:8px; }
+button { background:var(--accent); color:#fff; border:none; border-radius:6px; padding:6px 14px; font-size:13px; cursor:pointer; }
+button.sec { background:#eef2f7; color:var(--text); border:1px solid var(--border); }
+button:disabled { opacity:.5; cursor:default; }
+main { display:flex; height:calc(100vh - 57px); }
+#left { width:52%; min-width:520px; overflow:auto; padding:14px; border-right:1px solid var(--border); }
+#right { flex:1; overflow:auto; padding:14px; display:flex; flex-direction:column; }
+#detail { flex:1; display:flex; flex-direction:column; min-height:0; }
+.toolbar { display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; align-items:center; }
+.toolbar input[type=text] { padding:6px 10px; border:1px solid var(--border); border-radius:6px; flex:1; min-width:160px; }
+.toolbar select { padding:6px; border:1px solid var(--border); border-radius:6px; }
+.gcard { background:var(--card); border:1px solid var(--border); border-radius:8px; margin-bottom:8px; overflow:hidden; }
+.mselect { position:relative; }
+.mselect-btn { background:var(--card); color:var(--text); border:1px solid var(--border); border-radius:6px; padding:6px 12px; font-size:13px; cursor:pointer; }
+.mselect-btn:hover { border-color:var(--accent); color:var(--accent); }
+.mselect-panel { display:none; position:absolute; top:calc(100% + 4px); left:0; min-width:240px; max-height:380px; overflow:auto; background:var(--card); border:1px solid var(--border); border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,.13); z-index:30; padding:6px; }
+.mselect-panel.open { display:block; }
+.mselect-actions { display:flex; gap:6px; padding:2px 4px 8px; border-bottom:1px solid var(--border); margin-bottom:4px; }
+.mselect-actions button { flex:1; padding:3px 6px; font-size:12px; background:#eef2f7; color:var(--text); border:1px solid var(--border); }
+.mitem { display:flex; align-items:center; gap:8px; padding:5px 8px; border-radius:6px; cursor:pointer; font-size:13px; user-select:none; }
+.mitem:hover { background:#f0f4fa; }
+.mitem input { accent-color:var(--accent); cursor:pointer; }
+.mitem .cnt { margin-left:auto; color:var(--muted); font-size:11.5px; }
+.catsec { display:flex; align-items:center; gap:8px; margin:16px 0 8px; font-weight:600; font-size:13.5px; }
+.catsec::after { content:''; flex:1; height:1px; background:var(--border); }
+.catsec .cnt { font-weight:400; font-size:11.5px; color:var(--muted); }
+.ghead { padding:9px 12px; display:flex; align-items:center; gap:10px; cursor:pointer; }
+.ghead:hover { background:#fafbfc; }
+.gname { font-weight:600; }
+.gdesc { color:var(--muted); font-size:12px; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.badge { font-size:11px; padding:2px 8px; border-radius:10px; white-space:nowrap; }
+.badge.identical { background:#e7f6ec; color:var(--ok); }
+.badge.diverged { background:#fdeaea; color:var(--bad); }
+.badge.shared { background:#e8effd; color:var(--accent); }
+.badge.single { background:#f0f1f3; color:var(--muted); }
+.gbody { border-top:1px solid var(--border); display:none; padding:8px 12px; }
+.gcard.open .gbody { display:block; }
+.copyrow { display:flex; align-items:center; gap:10px; padding:6px 4px; border-bottom:1px dashed #eef0f2; font-size:13px; }
+.copyrow:last-child { border-bottom:none; }
+.tooltag { background:#eef2f7; border-radius:4px; padding:1px 7px; font-size:12px; min-width:118px; text-align:center; }
+.layertag { font-size:11px; color:var(--muted); }
+.badge.warn-plugin { background:#fef3e2; color:var(--warn); }
+.badge.dead { background:#fdeaea; color:var(--bad); }
+.path { color:var(--muted); font-size:11.5px; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; direction:rtl; text-align:left; }
+.mtime { color:var(--muted); font-size:11px; white-space:nowrap; }
+.rowbtns button { padding:3px 10px; font-size:12px; margin-left:6px; }
+h2 { font-size:15px; margin-bottom:10px; }
+textarea.editor { width:100%; flex:1; min-height:420px; font-family:Consolas,monospace; font-size:13px; border:1px solid var(--border); border-radius:8px; padding:10px; resize:vertical; background:var(--card); }
+textarea.editor.dirty { border-color:var(--warn); }
+.meta { color:var(--muted); font-size:12px; margin:6px 0; }
+.notice { background:#fef3e2; color:#92400e; font-size:12.5px; padding:7px 10px; border-radius:6px; margin-bottom:8px; }
+dialog { border:1px solid var(--border); border-radius:10px; padding:20px; min-width:420px; max-width:640px; }
+dialog::backdrop { background:rgba(0,0,0,.25); }
+dialog label { display:block; margin:10px 0 4px; font-size:13px; }
+dialog input, dialog select { width:100%; padding:7px 9px; border:1px solid var(--border); border-radius:6px; }
+.dlgbtns { margin-top:16px; text-align:right; display:flex; gap:8px; justify-content:flex-end; }
+.muted { color:var(--muted); }
+.toast { position:fixed; bottom:18px; right:18px; background:#111827; color:#fff; padding:9px 16px; border-radius:8px; font-size:13px; opacity:0; transition:.25s; z-index:50; max-width:420px; }
+.toast.show { opacity:.95; }
+/* 安装弹窗 */
+#pickList { max-height:260px; overflow:auto; border:1px solid var(--border); border-radius:6px; margin-top:6px; }
+.pickrow { display:flex; align-items:center; gap:8px; padding:7px 10px; border-bottom:1px solid #f0f1f3; font-size:13px; }
+.pickrow:last-child { border-bottom:none; }
+.pickrow input[type=checkbox] { accent-color:var(--accent); }
+.pickrow .pname { font-weight:600; }
+.pickrow .pdesc { color:var(--muted); font-size:11.5px; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pickrow .exists { background:#fef3e2; color:var(--warn); font-size:10.5px; padding:1px 6px; border-radius:8px; }
+.tgtchips { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+.tgtchip { padding:3px 10px; border:1px solid var(--border); border-radius:12px; font-size:12px; cursor:pointer; user-select:none; background:var(--card); color:var(--muted); }
+.tgtchip.on { background:var(--accent); border-color:var(--accent); color:#fff; }
+/* diff 预览 */
+.diffbox { background:#f8fafc; border:1px solid var(--border); border-radius:6px; padding:8px 10px; margin:6px 0; font-size:12.5px; max-height:220px; overflow:auto; }
+.logbox { background:#f8fafc; border:1px solid var(--border); border-radius:6px; padding:10px; font-family:Consolas,monospace; font-size:12px; max-height:50vh; overflow:auto; white-space:pre-wrap; }
+.diffbox .df { padding:2px 0; border-bottom:1px dashed #eef0f2; }
+.diffbox .df:last-child { border-bottom:none; }
+.diffbox .add { color:var(--ok); } .diffbox .del { color:var(--bad); } .diffbox .mod { color:var(--warn); }
+/* 文件树 */
+.filetree { display:flex; flex-wrap:wrap; gap:4px; margin:6px 0; }
+.filetree button { padding:2px 8px; font-size:11.5px; background:#eef2f7; color:var(--text); border:1px solid var(--border); font-family:Consolas,monospace; }
+.filetree button.on { background:var(--accent); color:#fff; }
+.logview { flex:1; font-family:Consolas,monospace; font-size:12px; white-space:pre-wrap; background:#f8fafc; border:1px solid var(--border); border-radius:8px; padding:12px; overflow:auto; }
+.stale { color:var(--warn); font-size:11.5px; margin-left:6px; }
+.catclick { cursor:pointer; }
+.catclick:hover { outline:1px solid var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Skill 工作台</h1>
+  <span class="stats" id="stats"></span><span class="stale" id="stale"></span>
+  <div class="hdrbtns">
+    <button class="sec" onclick="openInstall()">⬇ 从 GitHub 安装</button>
+    <button class="sec" onclick="openLog()">日志</button>
+    <button class="sec" onclick="rescan()">重新扫描</button>
+    <button onclick="openCreate()">+ 新建 skill</button>
+  </div>
+</header>
+<main>
+  <div id="left">
+    <div class="toolbar">
+      <input type="text" id="q" placeholder="搜索 skill 名 / 描述 / 工具…" oninput="render()">
+      <div class="mselect" id="catSelect">
+        <button class="mselect-btn" onclick="toggleDropdown(event)">功能 <span id="catSelLabel"></span> ▾</button>
+        <div class="mselect-panel" id="catPanel"></div>
+      </div>
+      <select id="filter" onchange="render()">
+        <option value="all">全部组</option>
+        <option value="diverged">⚠ 仅看分歧</option>
+        <option value="multi">多副本</option>
+        <option value="shared">共享链接</option>
+        <option value="single">单副本</option>
+      </select>
+    </div>
+    <div id="grouplist"></div>
+  </div>
+  <div id="right">
+    <div id="detail" class="muted">← 点击左侧 skill 查看与编辑</div>
+  </div>
+</main>
+
+<dialog id="createDlg">
+  <h2>新建 skill</h2>
+  <label>所属工具</label>
+  <select id="c_tool"></select>
+  <label>skill 名（小写字母/数字/连字符）</label>
+  <input id="c_name" placeholder="my-new-skill">
+  <label>一句话描述</label>
+  <input id="c_desc" placeholder="这个 skill 做什么、何时触发">
+  <div class="dlgbtns">
+    <button class="sec" onclick="createDlg.close()">取消</button>
+    <button onclick="doCreate()">创建</button>
+  </div>
+</dialog>
+
+<dialog id="installDlg" style="min-width:560px">
+  <h2>⬇ 从 GitHub 安装 skill</h2>
+  <div id="installStep1">
+    <label>仓库（owner/repo 或完整 URL，支持 gitee）</label>
+    <input id="i_repo" placeholder="e.g. anthropics/skills">
+    <div class="dlgbtns">
+      <button class="sec" onclick="installDlg.close()">取消</button>
+      <button onclick="doPreview()">识别 skill →</button>
+    </div>
+  </div>
+  <div id="installStep2" style="display:none">
+    <div class="meta" id="i_repoLabel"></div>
+    <label>识别到的 skill（勾选要安装的）</label>
+    <div id="pickList"></div>
+    <label>安装到哪些工具</label>
+    <div class="tgtchips" id="tgtChips"></div>
+    <div class="dlgbtns">
+      <button class="sec" onclick="backToStep1()">← 上一步</button>
+      <button id="i_go" onclick="doInstall()">安装</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="diffDlg">
+  <h2>分歧详情 <span class="muted" id="d_group" style="font-weight:400;font-size:13px"></span></h2>
+  <div class="meta" id="d_source"></div>
+  <div id="d_body"></div>
+  <div class="dlgbtns">
+    <button class="sec" onclick="diffDlg.close()">取消</button>
+    <button id="d_go" onclick="doConfirmedSync()">确认以最新同步全组</button>
+  </div>
+</dialog>
+
+<dialog id="logDlg" style="min-width:640px">
+  <h2>操作日志 <span class="muted" style="font-weight:400;font-size:13px">data/log.md · 最近同步/删除记录</span></h2>
+  <pre class="logbox" id="logBody"></pre>
+  <div class="dlgbtns"><button class="sec" onclick="logDlg.close()">关闭</button></div>
+</dialog>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let REG = null, curGroup = null, curFile = null, catSel = new Set(), dirty = false;
+const CAT_NAMES = { eng:'软件工程', frontend:'前端与设计', docs:'文档与数据', lark:'飞书生态', dingtalk:'钉钉生态', wecom:'企微生态', finance:'金融', search:'搜索与检索', content:'内容采集与创作', aimedia:'AI 媒体生成', km:'知识管理', browser:'浏览器与自动化', platform:'平台与技能管理', connector:'工具连接器', other:'其他' };
+const $ = id => document.getElementById(id);
+function toast(s) { const t = $('toast'); t.textContent = s; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2600); }
+async function api(path, opts) { const r = await fetch(path, opts); const j = await r.json(); if (!r.ok) throw new Error(j.error || r.status); return j; }
+function fmtTime(iso) { if (!iso) return ''; const d = new Date(iso); return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; }
+
+async function load(keepState = true) {
+  const openGroups = keepState ? new Set([...document.querySelectorAll('.gcard.open')].map(el => el.dataset.g)) : new Set();
+  const scrollY = keepState ? $('left').scrollTop : 0;
+  REG = await api('/api/registry');
+  const layers = {};
+  REG.copies.forEach(c => layers[c.layer] = (layers[c.layer] || 0) + 1);
+  $('stats').textContent = `${REG.totalGroups} 组 · ${REG.totalCopies} 副本（用户 ${layers.user || 0} · 共享 ${layers.shared || 0} · 插件 ${layers.plugin || 0} · 运行时 ${layers.runtime || 0}）`;
+  const age = Date.now() - new Date(REG.generatedAt).getTime();
+  $('stale').textContent = age > 10 * 60000 ? `扫描于 ${Math.round(age / 60000)} 分钟前` : '';
+  const tools = [...new Set(REG.copies.filter(c => c.layer === 'user' && !c.link).map(c => c.tool))].sort();
+  $('c_tool').innerHTML = tools.map(t => `<option>${t}</option>`).join('');
+  window.userTools = tools;
+  renderCatPanel();
+  render();
+  if (keepState) {
+    openGroups.forEach(g => { const el = document.querySelector(`[data-g="${g}"]`); if (el) el.classList.add('open'); });
+    $('left').scrollTop = scrollY;
+  }
+}
+
+function catCounts() {
+  const counts = {};
+  REG.groups.forEach(g => counts[g.category] = (counts[g.category] || 0) + 1);
+  return counts;
+}
+function catLabel(c) { return CAT_NAMES[c] || c || '其他'; }
+
+function renderCatPanel() {
+  const counts = catCounts();
+  const cats = Object.keys(CAT_NAMES).filter(c => counts[c]).sort((a, b) => counts[b] - counts[a]);
+  $('catSelLabel').textContent = catSel.size === 0 ? '：全部' : catSel.size === 1 ? `：${catLabel([...catSel][0])}` : `：已选 ${catSel.size} 类`;
+  $('catPanel').innerHTML = `<div class="mselect-actions">
+      <button onclick="catAll()">全选</button><button onclick="catNone()">清空</button>
+    </div>` +
+    cats.map(c => `<label class="mitem"><input type="checkbox" ${catSel.has(c) ? 'checked' : ''} onchange="catToggle('${c}')"> ${catLabel(c)}<span class="cnt">${counts[c]}</span></label>`).join('');
+}
+function catToggle(c) {
+  if (catSel.has(c)) catSel.delete(c); else catSel.add(c);
+  renderCatPanel(); render();
+}
+function catAll() {
+  const counts = catCounts();
+  Object.keys(CAT_NAMES).forEach(c => { if (counts[c]) catSel.add(c); });
+  renderCatPanel(); render();
+}
+function catNone() { catSel.clear(); renderCatPanel(); render(); }
+function toggleDropdown(e) { e.stopPropagation(); $('catPanel').classList.toggle('open'); }
+document.addEventListener('click', e => { if (!$('catSelect').contains(e.target)) $('catPanel').classList.remove('open'); });
+
+function render() {
+  const q = $('q').value.toLowerCase(), f = $('filter').value;
+  const counts = catCounts();
+  const allCats = Object.keys(CAT_NAMES).filter(c => counts[c]).sort((a, b) => counts[b] - counts[a]);
+  const allSelected = catSel.size === 0 || (catSel.size > 0 && allCats.every(c => catSel.has(c)));
+  const showHeaders = allSelected || catSel.size >= 2;
+  const activeCats = allSelected ? allCats : allCats.filter(c => catSel.has(c));
+
+  const list = REG.groups.filter(g => {
+    if (!allSelected && !catSel.has(g.category)) return false;
+    if (f === 'diverged' && g.syncState !== 'diverged') return false;
+    if (f === 'multi' && g.copies.length < 2) return false;
+    if (f === 'shared' && g.syncState !== 'shared-only') return false;
+    if (f === 'single' && g.copies.length !== 1) return false;
+    if (!q) return true;
+    if (g.canonical.toLowerCase().includes(q)) return true;
+    return g.copies.some(id => { const c = REG.copies.find(x => x.id === id); return c && (c.tool.toLowerCase().includes(q) || (c.frontmatter.description || '').toLowerCase().includes(q)); });
+  });
+
+  const card = g => {
+    const copies = g.copies.map(id => REG.copies.find(c => c.id === id));
+    const desc = (copies.find(c => c.frontmatter.description) || copies[0]).frontmatter.description || '';
+    let badge;
+    if (g.syncState === 'diverged') badge = `<span class="badge diverged">分歧</span>`;
+    else if (g.syncState === 'identical') badge = `<span class="badge identical">一致 ×${copies.length}</span>`;
+    else if (g.syncState === 'shared-only') badge = `<span class="badge shared">共享真身 ×${copies.length}</span>`;
+    else badge = `<span class="badge single">单副本</span>`;
+    return `<div class="gcard" data-g="${g.canonical}">
+      <div class="ghead" onclick="toggleGroup('${g.canonical}')">
+        <span class="gname">${g.canonical}</span><span class="gdesc">${desc}</span>
+        <span class="badge single catclick" title="点击修改类别" onclick="event.stopPropagation();changeCategory('${g.canonical}','${g.category}')">${catLabel(g.category)}</span>${badge}
+      </div>
+      <div class="gbody" id="body-${g.canonical}">${copies.map(copyRow).join('')}
+        <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+          ${g.syncState === 'diverged' ? `<button class="sec" onclick="showDiff('${g.canonical}')">查看差异 / 同步</button>` : ''}
+          ${g.syncState !== 'shared-only' ? `<button class="sec" onclick="openCopyTo('${g.canonical}')">复制到…</button>` : ''}
+          <button class="sec" style="color:var(--bad)" onclick="deleteGroup('${g.canonical}')">删除整组</button>
+        </div>
+      </div>
+    </div>`;
+  };
+
+  let html;
+  if (showHeaders) {
+    html = activeCats.map(c => {
+      const items = list.filter(g => g.category === c);
+      if (!items.length) return '';
+      return `<div class="catsec">${catLabel(c)}<span class="cnt">${items.length}</span></div>` + items.map(card).join('');
+    }).join('');
+  } else {
+    html = list.map(card).join('');
+  }
+  $('grouplist').innerHTML = html || '<p class="muted">无匹配项</p>';
+}
+
+function copyRow(c) {
+  let tags = `<span class="tooltag">${c.tool}</span><span class="layertag">${c.layer}</span>`;
+  if (c.link) {
+    tags += c.link.masterLive ? `<span class="badge shared">链接</span>` : `<span class="badge dead">断链</span>`;
+  } else if (c.layer === 'plugin') {
+    tags += `<span class="badge warn-plugin">插件更新即失效</span>`;
+  } else if (c.layer === 'runtime') {
+    tags += `<span class="badge single">运行时</span>`;
+  }
+  const p = c.link ? c.link.resolved : c.dir;
+  const editable = !c.link || c.link.masterLive;
+  return `<div class="copyrow">${tags}
+    <span class="path" title="${p}">${p}</span>
+    <span class="mtime">${fmtTime(c.mtime)}</span>
+    <span class="rowbtns">
+      ${editable ? `<button class="sec" onclick="editCopy('${c.canonical}','${encodeURIComponent(c.dir)}','${c.id}')">编辑</button>` : ''}
+      ${(!c.link && c.layer !== 'runtime') ? `<button class="sec" onclick="delCopy('${c.id}')">删除</button>` : ''}
+    </span>
+  </div>`;
+}
+
+function toggleGroup(name) { document.querySelector(`[data-g="${name}"]`).classList.toggle('open'); }
+
+function markDirty(v) { dirty = v; const ed = $('ed'); if (ed) ed.classList.toggle('dirty', v); }
+
+async function editCopy(canon, encDir, id) {
+  if (dirty && !confirm('当前编辑未保存，确定离开？')) return;
+  markDirty(false);
+  curGroup = canon;
+  const dir = decodeURIComponent(encDir);
+  const c = REG.copies.find(x => x.id === id);
+  const realDir = c.link ? c.link.resolved : c.dir;
+  const r = await api('/api/group/' + canon);
+  const fm = c.frontmatter || {};
+  const pluginWarn = c.layer === 'plugin' ? `<div class="notice">⚠ 此副本位于插件缓存，插件更新时编辑会被覆盖。</div>` : '';
+  let files = [];
+  try {
+    const tree = await api('/api/tree?dir=' + encodeURIComponent(realDir));
+    files = tree.files.filter(f => !f.dir);
+  } catch {}
+  window.curFiles = files; window.curRealDir = realDir;
+  $('detail').innerHTML = `${pluginWarn}
+    <h2>${canon} <span class="muted" style="font-weight:400;font-size:13px">· ${c.tool} / ${c.layer}</span></h2>
+    <div class="meta">${fm.description ? fm.description : ''}<br>路径：<code>${realDir}</code>${c.link ? '<br>(经链接编辑，实际写入真身)' : ''}</div>
+    <div class="filetree" id="ftree"></div>
+    <textarea class="editor" id="ed" spellcheck="false" oninput="markDirty(true)"></textarea>
+    <div style="margin-top:8px;display:flex;gap:8px">
+      <button onclick="saveFile()">保存到原位 (Ctrl+S)</button>
+      <button class="sec" onclick="loadFile()">重读</button>
+      ${r.group.syncState === 'diverged' ? `<button onclick="showDiff('${canon}')">以最新同步全组</button>` : ''}
+    </div>`;
+  curFile = realDir + '/SKILL.md';
+  window.renderFileTree = (active) => {
+    $('ftree').innerHTML = files.map(f =>
+      `<button class="${f.f === active ? 'on' : ''}" onclick="loadTreeFile('${encodeURIComponent(f.f)}')">${f.f}</button>`).join('');
+  };
+  window.loadTreeFile = async (encF) => {
+    if (dirty && !confirm('当前编辑未保存，确定切换文件？')) return;
+    markDirty(false);
+    const f = decodeURIComponent(encF);
+    const r2 = await api('/api/file?path=' + encodeURIComponent(realDir + '/' + f));
+    curFile = realDir + '/' + f;
+    $('ed').value = r2.content;
+    renderFileTree(f);
+  };
+  renderFileTree('SKILL.md');
+  await loadFile();
+}
+async function loadFile() {
+  const f = await api('/api/file?path=' + encodeURIComponent(curFile));
+  $('ed').value = f.content;
+  markDirty(false);
+}
+window.loadFile = loadFile;
+window.saveFile = async () => {
+  if (!$('ed')) return;
+  await api('/api/file', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: curFile, content: $('ed').value }) });
+  markDirty(false); toast('已保存并重扫'); await load();
+};
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 's' && $('ed')) { e.preventDefault(); saveFile(); }
+});
+window.addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+
+async function showDiff(canon) {
+  const r = await api('/api/diff?canonical=' + encodeURIComponent(canon));
+  $('d_group').textContent = '· ' + canon;
+  $('d_source').textContent = r.source ? `同步源（最新）：${r.source.tool} — ${r.source.dir} @ ${fmtTime(r.source.mtime)}` : (r.note || '');
+  $('d_body').innerHTML = (r.diffs || []).map(d => d.identical
+    ? `<div class="diffbox"><b>${d.tool}</b>：与源一致 ✓</div>`
+    : `<div class="diffbox"><b>${d.tool}</b>：${d.total} 处差异
+        ${d.files.map(f => `<div class="df ${f.change.startsWith('新增') ? 'add' : f.change.startsWith('目标多余') ? 'del' : 'mod'}">${f.f} — ${f.change}</div>`).join('')}</div>`
+  ).join('') || '<p class="muted">无差异</p>';
+  window.pendingSyncGroup = canon;
+  $('d_go').disabled = !r.source;
+  diffDlg.showModal();
+}
+async function doConfirmedSync() {
+  const g = window.pendingSyncGroup;
+  diffDlg.close();
+  await doSync(g);
+}
+
+async function doSync(canon) {
+  const r = await api('/api/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ canonical: canon }) });
+  toast('同步完成'); console.log(r.log); await load();
+}
+
+async function delCopy(id) {
+  if (!confirm('确认删除该副本？内容会先移入工作台回收站（data/trash），不直接销毁。')) return;
+  await api('/api/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+  toast('已删除（回收站可找回）'); $('detail').innerHTML = '<div class="muted">已删除</div>'; await load();
+}
+
+async function deleteGroup(canon) {
+  const g = REG.groups.find(x => x.canonical === canon);
+  const ids = g.copies.map(id => REG.copies.find(c => c.id === id)).filter(c => c && !c.link && c.layer !== 'runtime');
+  if (!ids.length) return toast('无真实副本可删（共享链接入口请到原工具卸载）');
+  if (!confirm(`删除整组「${canon}」？\n将删除 ${ids.length} 个副本：\n${ids.map(c => '  · ' + c.tool + ' — ' + c.dir).join('\n')}\n\n全部先移入回收站，可找回。`)) return;
+  for (const c of ids) await api('/api/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: c.id }) });
+  toast(`已删除 ${ids.length} 个副本（回收站可找回）`); await load();
+}
+
+async function openCopyTo(canon) {
+  const g = REG.groups.find(x => x.canonical === canon);
+  const hasTools = new Set(g.copies.map(id => REG.copies.find(c => c.id === id)).filter(Boolean).map(c => c.tool));
+  const missing = (window.userTools || []).filter(t => !hasTools.has(t));
+  if (!missing.length) return toast('所有用户级工具都已有该 skill 副本');
+  const t = prompt('复制到哪个工具？\n\n' + missing.map((m, i) => `${i + 1}. ${m}`).join('\n') + '\n\n输入序号或名称：');
+  if (!t) return;
+  const idx = parseInt(t) - 1;
+  const target = missing[idx] || missing.find(m => m === t.trim());
+  if (!target) return toast('未匹配到工具：' + t);
+  try {
+    const r = await api('/api/copy', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ canonical: canon, targetTool: target }) });
+    toast(`已复制到 ${target}：${r.dst}`); await load();
+  } catch (e) { toast('复制失败：' + e.message); }
+}
+window.openCopyTo = openCopyTo;
+
+async function changeCategory(canon, cur) {
+  const opts = Object.entries(CAT_NAMES).map(([k, v]) => `${k}=${v}`).join('\n');
+  const inp = prompt(`修改「${canon}」的类别：\n${opts}\n\n输入左侧 key（当前 ${cur}），留空恢复自动分类：`);
+  if (inp === null) return;
+  const key = inp.trim();
+  if (key && !CAT_NAMES[key]) return toast('未知类别 key：' + key);
+  await api('/api/category', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ canonical: canon, category: key || null }) });
+  toast('类别已更新'); await load();
+}
+
+function openCreate() { $('createDlg').showModal(); }
+async function doCreate() {
+  try {
+    const r = await api('/api/create', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tool: $('c_tool').value, name: $('c_name').value.trim(), description: $('c_desc').value.trim() }) });
+    $('createDlg').close(); toast('已创建: ' + r.dir); await load();
+    $('q').value = $('c_name').value.trim(); render();
+  } catch (e) { toast('创建失败: ' + e.message); }
+}
+
+// ---- GitHub 安装（两段式） ----
+let installRepo = '', installSkills = [];
+function openInstall() { $('installStep1').style.display = ''; $('installStep2').style.display = 'none'; $('i_repo').value = ''; installDlg.showModal(); }
+async function doPreview() {
+  installRepo = $('i_repo').value.trim();
+  if (!installRepo) return toast('请填仓库');
+  toast('克隆中…');
+  try {
+    const r = await api('/api/install-preview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ repo: installRepo }) });
+    installSkills = r.skills;
+    $('i_repoLabel').textContent = `${installRepo} — 识别到 ${r.skills.length} 个 skill`;
+    $('pickList').innerHTML = r.skills.map((s, i) => `<div class="pickrow">
+      <input type="checkbox" checked data-i="${i}">
+      <span class="pname">${s.name}</span>
+      ${s.exists ? '<span class="exists">已有同名组</span>' : ''}
+      <span class="pdesc" title="${(s.description || '').replace(/"/g, '&quot;')}">${s.description || s.relPath}</span>
+    </div>`).join('');
+    $('tgtChips').innerHTML = (window.userTools || []).map(t => `<span class="tgtchip${t === 'zcode' ? ' on' : ''}" data-t="${t}" onclick="this.classList.toggle('on')">${t}</span>`).join('');
+    $('installStep1').style.display = 'none'; $('installStep2').style.display = '';
+  } catch (e) { toast(e.message); }
+}
+function backToStep1() { $('installStep1').style.display = ''; $('installStep2').style.display = 'none'; }
+async function doInstall() {
+  const picks = [...$('pickList').querySelectorAll('input:checked')].map(cb => {
+    const s = installSkills[+cb.dataset.i];
+    return { relPath: s.relPath, name: s.name };
+  });
+  const targets = [...$('tgtChips').querySelectorAll('.tgtchip.on')].map(el => el.dataset.t);
+  if (!picks.length) return toast('未勾选任何 skill');
+  if (!targets.length) return toast('未选择目标工具');
+  $('i_go').disabled = true; toast('安装中…');
+  try {
+    const r = await api('/api/install', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ repo: installRepo, picks: picks.map(p => ({ ...p, targets })) }) });
+    installDlg.close();
+    toast(`已安装 ${r.installed.length} 个副本${r.skipped.length ? '；跳过: ' + r.skipped.join('、') : ''}`);
+    await load();
+    if (r.installed.length) {
+      $('q').value = picks[0].name; render();
+      const el = document.querySelector(`[data-g="${picks[0].name}"]`);
+      if (el) { el.classList.add('open'); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+    }
+  } catch (e) { toast('安装失败: ' + e.message); }
+  $('i_go').disabled = false;
+}
+
+async function rescan() { toast('重扫中…'); await api('/api/rescan', { method: 'POST' }); await load(); toast('完成'); }
+async function openLog() {
+  const r = await api('/api/log');
+  $('logBody').textContent = r.log || '（日志为空：还没有执行过同步操作）';
+  logDlg.showModal();
+}
+window.openLog = openLog;
+load();
+</script>
+</body>
+</html>
