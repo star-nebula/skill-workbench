@@ -18,7 +18,7 @@
 
 把下面这句话原样发给你的 AI 编码工具（Codex / WorkBuddy / ZCode / Claude Code / Cline 等任何能执行命令的 agent），它就会自动完成下载、检测、启动：
 
-> 帮我部署 Skill 工作台：clone https://github.com/<你>/skill-workbench 到任意目录（如 E:\Projects\workbenches\skill-workbench），进入该目录后依次执行 `node tools/autodetect.cjs` 自动检测本机 AI 工具的 skill 目录并生成配置、`node tools/scan.cjs` 生成注册表、后台启动 `node server.cjs`（Node ≥ 18，零依赖无需 npm install），最后告诉我浏览器打开 http://localhost:8788 即可使用。若 autodetect 提示未发现工具目录，让它按 README「配置」一节手工编辑 config/roots.cjs 后重试。
+> 帮我部署 Skill 工作台：clone https://github.com/star-nebula/skill-workbench 到任意目录（如 E:\Projects\workbenches\skill-workbench），进入该目录后依次执行 `node tools/autodetect.cjs` 自动检测本机 AI 工具的 skill 目录并生成配置、`node tools/scan.cjs` 生成注册表、后台启动 `node server.cjs`（Node ≥ 18，零依赖无需 npm install），最后告诉我浏览器打开 http://localhost:8788 即可使用。若 autodetect 提示未发现工具目录，让它按 README「配置」一节手工编辑 config/roots.cjs 后重试。
 
 部署好后每次启动只需一条命令：`node server.cjs`。
 
