@@ -9,6 +9,7 @@ const { createHash } = require('crypto');
 
 const WB = path.resolve(__dirname, '..');
 const cfg = require(WB + '/config/roots.cjs');
+const originCfg = require(WB + '/config/origins.cjs');
 
 function isLink(p) {
   try { return fs.lstatSync(p).isSymbolicLink(); } catch { return false; }
@@ -83,13 +84,16 @@ function scanRoot(root) {
       : fs.existsSync(path.join(full, 'SKILL.md')) ? path.join(full, 'SKILL.md') : null;
     const fm = skillMd ? parseFrontmatter(skillMd) : {};
     const stat = fs.statSync(resolved);
+    const canonical = canonicalize(fm.name || name);
+    const layer = linked && root.master ? 'shared' : root.layer;
     copies.push({
       id: root.tool + '/' + name,
       tool: root.tool,
       dir: full.replace(/\\/g, '/'),
       name,
-      canonical: canonicalize(fm.name || name),
-      layer: linked && root.master ? 'shared' : root.layer,
+      canonical,
+      origin: originCfg.resolve(canonical, resolved, layer, name),
+      layer,
       link: linked ? { target: target.replace(/\\/g, '/'), resolved: resolved.replace(/\\/g, '/'), masterLive } : null,
       hasSkillMd: !!skillMd,
       frontmatter: { name: fm.name || null, version: fm.version || null, description: fm.description ? String(fm.description).slice(0, 160) : null },
@@ -115,12 +119,14 @@ for (const pg of cfg.pluginGlobs) {
         const fm = parseFrontmatter(path.join(r, 'SKILL.md'));
         const stat = fs.statSync(r);
         const name = fm.name || e.name;
+        const canonical = canonicalize(name);
         copies.push({
           id: pg.tool + '/' + name + '@' + createHash('md5').update(r).digest('hex').slice(0, 6),
           tool: pg.tool,
           dir: r.replace(/\\/g, '/'),
           name,
-          canonical: canonicalize(name),
+          canonical,
+          origin: originCfg.resolve(canonical, r, 'plugin', name),
           layer: 'plugin',
           link: null, hasSkillMd: true,
           frontmatter: { name: fm.name || null, version: fm.version || null, description: fm.description ? String(fm.description).slice(0, 160) : null },
@@ -142,14 +148,21 @@ const groupMap = {};
 for (const c of copies) {
   (groupMap[c.canonical] = groupMap[c.canonical] || []).push(c.id);
 }
-const groups = Object.entries(groupMap).map(([canonical, ids]) => ({
-  canonical,
-  category: catCfg.resolve(canonical),
-  copies: ids,
-  status: ids.length > 1 ? 'multi' : 'single',
-  // 初步一致性：仅当组内 >=2 个真实副本（link!=null 的共享入口不算分歧源）
-  needsReview: null,
-})).sort((a, b) => a.canonical.localeCompare(b.canonical));
+const groups = Object.entries(groupMap).map(([canonical, ids]) => {
+  const gCopies = ids.map(id => copies.find(c => c.id === id)).filter(Boolean);
+  // 组级 origin：组内任一副本为 installed 即 installed（保守——组内只要有一个第三方安装
+  // 痕迹，同步就可能把上游更新广播到全组）；全组无痕迹才 self
+  const gOrigin = gCopies.some(c => c.origin === 'installed') ? 'installed' : 'self';
+  return {
+    canonical,
+    category: catCfg.resolve(canonical),
+    origin: gOrigin,
+    copies: ids,
+    status: ids.length > 1 ? 'multi' : 'single',
+    // 初步一致性：仅当组内 >=2 个真实副本（link!=null 的共享入口不算分歧源）
+    needsReview: null,
+  };
+}).sort((a, b) => a.canonical.localeCompare(b.canonical));
 
 const out = { generatedAt: new Date().toISOString(), totalCopies: copies.length, totalGroups: groups.length, copies, groups, errors };
 fs.writeFileSync(WB + '/data/registry.json', JSON.stringify(out, null, 1));

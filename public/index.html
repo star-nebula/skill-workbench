@@ -54,6 +54,9 @@ main { display:flex; height:calc(100vh - 57px); }
 .layertag { font-size:11px; color:var(--muted); }
 .badge.warn-plugin { background:#fef3e2; color:var(--warn); }
 .badge.dead { background:#fdeaea; color:var(--bad); }
+.badge.origin-self { background:#e7f6ec; color:#2e7d4f; }
+.badge.origin-installed { background:#e8effd; color:var(--accent); }
+.badge.origin-unknown { background:#f0f1f3; color:var(--muted); }
 .path { color:var(--muted); font-size:11.5px; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; direction:rtl; text-align:left; }
 .mtime { color:var(--muted); font-size:11px; white-space:nowrap; }
 .rowbtns button { padding:3px 10px; font-size:12px; margin-left:6px; }
@@ -200,7 +203,10 @@ async function load(keepState = true) {
   REG = await api('/api/registry');
   const layers = {};
   REG.copies.forEach(c => layers[c.layer] = (layers[c.layer] || 0) + 1);
-  $('stats').textContent = `${REG.totalGroups} 组 · ${REG.totalCopies} 副本（用户 ${layers.user || 0} · 共享 ${layers.shared || 0} · 插件 ${layers.plugin || 0} · 运行时 ${layers.runtime || 0}）`;
+  const selfN = REG.copies.filter(c => c.origin === 'self').length;
+  const instN = REG.copies.filter(c => c.origin === 'installed').length;
+  const unkN = REG.copies.length - selfN - instN;
+  $('stats').textContent = `${REG.totalGroups} 组 · ${REG.totalCopies} 副本（用户 ${layers.user || 0} · 共享 ${layers.shared || 0} · 插件 ${layers.plugin || 0} · 运行时 ${layers.runtime || 0}）· 自管 ${selfN} · 安装 ${instN}${unkN ? ` · 未知 ${unkN}` : ''}`;
   const age = Date.now() - new Date(REG.generatedAt).getTime();
   $('stale').textContent = age > 10 * 60000 ? `扫描于 ${Math.round(age / 60000)} 分钟前` : '';
   const tools = [...new Set(REG.copies.filter(c => c.layer === 'user' && !c.link).map(c => c.tool))].sort();
@@ -220,6 +226,7 @@ function catCounts() {
   return counts;
 }
 function catLabel(c) { return CAT_NAMES[c] || c || '其他'; }
+function originLabel(o) { return o === 'self' ? '自管' : o === 'installed' ? '安装' : '未知'; }
 
 function renderCatPanel() {
   const counts = catCounts();
@@ -273,6 +280,7 @@ function render() {
     return `<div class="gcard" data-g="${g.canonical}">
       <div class="ghead" onclick="toggleGroup('${g.canonical}')">
         <span class="gname">${g.canonical}</span><span class="gdesc">${desc}</span>
+        <span class="badge origin-${g.origin}" title="来源：自管=自己创建维护，安装=官方/第三方，未知=待标记">${originLabel(g.origin)}</span>
         <span class="badge single catclick" title="点击修改类别" onclick="event.stopPropagation();changeCategory('${g.canonical}','${g.category}')">${catLabel(g.category)}</span>${badge}
       </div>
       <div class="gbody" id="body-${g.canonical}">${copies.map(copyRow).join('')}
@@ -300,6 +308,7 @@ function render() {
 
 function copyRow(c) {
   let tags = `<span class="tooltag">${c.tool}</span><span class="layertag">${c.layer}</span>`;
+  tags += `<span class="badge origin-${c.origin}" title="来源：自管/安装/未知">${originLabel(c.origin)}</span>`;
   if (c.link) {
     tags += c.link.masterLive ? `<span class="badge shared">链接</span>` : `<span class="badge dead">断链</span>`;
   } else if (c.layer === 'plugin') {

@@ -36,6 +36,12 @@ node server.cjs
 # → 打开 http://localhost:8788
 ```
 
+Windows（Git Bash）下可用一键脚本代替三步（自动定位项目根，start 会先停旧进程）：
+
+```bash
+bash scripts/skill-workbench.sh start|stop|scan|sync-status
+```
+
 要求：Node ≥ 18（仅内置模块，无需 npm install）、Windows（robocopy 同步）/ macOS / Linux 均可运行，非 Windows 上同步自动退化为 Node 递归复制。
 
 ## 功能
@@ -43,6 +49,7 @@ node server.cjs
 | 功能 | 说明 |
 |---|---|
 | 总览矩阵 | 223 组 × N 副本；按功能分类（15 类，可点击卡片徽章人工覆写）；按工具/分歧/单副本/共享筛选 |
+| 来源标记 | 每个 skill 自动判定「自管 / 安装」（自管=自己维护的资产，安装=官方第三方、可能被上游更新覆盖）；依据目录安装元数据、所在层、LICENSE、agent-* 前缀等信号推断，无痕迹默认自管；特例可人工覆盖（`config/origins.cjs`）；头部统计自管/安装数量 |
 | 在线编辑 | 点开任意副本 → 文件树 → 编辑任意文件 → Ctrl+S 保存到原位；未保存离开有确认拦截 |
 | 分歧检测 | 组内副本 treeHash 不一致即标「分歧」；查看差异（新增于源 / 目标多余 / 内容不同）→ 一键以最新副本同步全组 |
 | 同步语义 | **最后编辑胜出**：组内 mtime 最新的副本为源，镜像到其余副本；多余文件先移入 `data/trash/<时间戳>/` 不硬删 |

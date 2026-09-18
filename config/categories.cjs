@@ -148,6 +148,11 @@ module.exports = {
     'autoglm-remove-bg': 'aimedia',
     'autoglm-search-image': 'aimedia',
     'note2images': 'aimedia',
+    'byted-mediakit-audio': 'aimedia',
+    'byted-mediakit-editing': 'aimedia',
+    'byted-mediakit-image': 'aimedia',
+    'byted-mediakit-shared': 'aimedia',
+    'byted-mediakit-video': 'aimedia',
     // ---- 知识管理 ----
     'obsidian-cli': 'km',
     'obsidian-markdown': 'km',
