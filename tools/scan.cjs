@@ -92,7 +92,7 @@ function scanRoot(root) {
       dir: full.replace(/\\/g, '/'),
       name,
       canonical,
-      origin: originCfg.resolve(canonical, resolved, layer, name),
+      origin: originCfg.resolveWithTool(canonical, resolved, layer, name, root.tool),
       layer,
       link: linked ? { target: target.replace(/\\/g, '/'), resolved: resolved.replace(/\\/g, '/'), masterLive } : null,
       hasSkillMd: !!skillMd,
@@ -126,7 +126,7 @@ for (const pg of cfg.pluginGlobs) {
           dir: r.replace(/\\/g, '/'),
           name,
           canonical,
-          origin: originCfg.resolve(canonical, r, 'plugin', name),
+          origin: originCfg.resolveWithTool(canonical, r, 'plugin', name, pg.tool),
           layer: 'plugin',
           link: null, hasSkillMd: true,
           frontmatter: { name: fm.name || null, version: fm.version || null, description: fm.description ? String(fm.description).slice(0, 160) : null },
@@ -150,9 +150,11 @@ for (const c of copies) {
 }
 const groups = Object.entries(groupMap).map(([canonical, ids]) => {
   const gCopies = ids.map(id => copies.find(c => c.id === id)).filter(Boolean);
-  // 组级 origin：组内任一副本为 installed 即 installed（保守——组内只要有一个第三方安装
-  // 痕迹，同步就可能把上游更新广播到全组）；全组无痕迹才 self
-  const gOrigin = gCopies.some(c => c.origin === 'installed') ? 'installed' : 'self';
+  // 组级 origin（保守）：任一 installed → installed；否则任一 unknown → unknown（不强行分类）；
+  // 全组 self 才 self
+  const gOrigin = gCopies.some(c => c.origin === 'installed') ? 'installed'
+    : gCopies.some(c => c.origin === 'unknown') ? 'unknown'
+    : 'self';
   return {
     canonical,
     category: catCfg.resolve(canonical),
